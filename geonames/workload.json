@@ -12,13 +12,10 @@
   "corpora": [
     {
       "name": "geonames",
-      "base-url": "https://opensearch-benchmark-workloads.s3.amazonaws.com/corpora/geonames",
       "documents": [
         {
-          "source-file": "documents-2.json.bz2",
-          "document-count": 11396503,
-          "compressed-bytes": 265208777,
-          "uncompressed-bytes": 3547613828
+          "source-file": "documents-1.json",
+          "document-count": 100
         }
       ]
     }
