@@ -9,14 +9,18 @@
     {
       "operation": {
         "operation-type": "create-index",
-        "settings": {{index_settings | default({}) | tojson}}
+        "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
+          "index.codec": "best_compression",
+          "index.refresh_interval": "30s",
+          "index.translog.flush_threshold_size": "4g"
+        }{%- endif %}
       }
     },
     {
       "name": "check-cluster-health",
       "operation": {
         "operation-type": "cluster-health",
-        "index": "geonames",
+        "index": "nyc_taxis",
         "request-params": {
           "wait_for_status": "{{cluster_health | default('green')}}",
           "wait_for_no_relocating_shards": "true"
@@ -25,8 +29,8 @@
       }
     },
     {
-      "operation": "index-append",
-      "warmup-time-period": 120,
+      "operation": "index",
+      "warmup-time-period": 240,
       "clients": {{bulk_indexing_clients | default(8)}},
       "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
     },
@@ -37,7 +41,9 @@
     {
       "operation": {
         "operation-type": "force-merge",
-        "request-timeout": 7200
+        "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
+        "max-num-segments": {{ force_merge_max_num_segments | tojson }}
+        {%- endif %}
       }
     },
     {
@@ -45,17 +51,7 @@
       "operation": "refresh"
     },
     {
-      "name": "wait-until-merges-finish",
-      "operation": {
-        "operation-type": "index-stats",
-        "index": "_all",
-        "condition": {
-          "path": "_all.total.merges.current",
-          "expected-value": 0
-        },
-        "retry-until-success": true,
-        "include-in-reporting": false
-      }
+      "operation": "wait-until-merges-finish"
     },
     {
       "operation": "scroll",
@@ -74,14 +70,18 @@
     {
       "operation": {
         "operation-type": "create-index",
-        "settings": {{index_settings | default({}) | tojson}}
+        "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
+          "index.codec": "best_compression",
+          "index.refresh_interval": "30s",
+          "index.translog.flush_threshold_size": "4g"
+        }{%- endif %}
       }
     },
     {
       "name": "check-cluster-health",
       "operation": {
         "operation-type": "cluster-health",
-        "index": "geonames",
+        "index": "nyc_taxis",
         "request-params": {
           "wait_for_status": "{{cluster_health | default('green')}}",
           "wait_for_no_relocating_shards": "true"
@@ -90,29 +90,29 @@
       }
     },
     {
-      "operation": "index-append",
-      "warmup-time-period": 120,
+      "operation": "index",
+      "warmup-time-period": 240,
       "clients": {{bulk_indexing_clients | default(8)}},
       "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
     },
     {
+      "name": "refresh-after-index",
+      "operation": "refresh"
+    },
+    {
       "operation": {
         "operation-type": "force-merge",
-        "request-timeout": 7200
+        "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
+        "max-num-segments": {{ force_merge_max_num_segments | tojson }}
+        {%- endif %}
       }
     },
     {
-      "name": "wait-until-merges-finish",
-      "operation": {
-        "operation-type": "index-stats",
-        "index": "_all",
-        "condition": {
-          "path": "_all.total.merges.current",
-          "expected-value": 0
-        },
-        "retry-until-success": true,
-        "include-in-reporting": false
-      }
+      "name": "refresh-after-force-merge",
+      "operation": "refresh"
+    },
+    {
+      "operation": "wait-until-merges-finish"
     },
     {
       "name": "search-after-without-local-pit",
@@ -214,14 +214,18 @@
     {
       "operation": {
         "operation-type": "create-index",
-        "settings": {{index_settings | default({}) | tojson}}
+        "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
+          "index.codec": "best_compression",
+          "index.refresh_interval": "30s",
+          "index.translog.flush_threshold_size": "4g"
+        }{%- endif %}
       }
     },
     {
       "name": "check-cluster-health",
       "operation": {
         "operation-type": "cluster-health",
-        "index": "geonames",
+        "index": "nyc_taxis",
         "request-params": {
           "wait_for_status": "{{cluster_health | default('green')}}",
           "wait_for_no_relocating_shards": "true"
@@ -230,29 +234,29 @@
       }
     },
     {
-      "operation": "index-append",
-      "warmup-time-period": 120,
+      "operation": "index",
+      "warmup-time-period": 240,
       "clients": {{bulk_indexing_clients | default(8)}},
       "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
     },
     {
+      "name": "refresh-after-index",
+      "operation": "refresh"
+    },
+    {
       "operation": {
         "operation-type": "force-merge",
-        "request-timeout": 7200
+        "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
+        "max-num-segments": {{ force_merge_max_num_segments | tojson }}
+        {%- endif %}
       }
     },
     {
-      "name": "wait-until-merges-finish",
-      "operation": {
-        "operation-type": "index-stats",
-        "index": "_all",
-        "condition": {
-          "path": "_all.total.merges.current",
-          "expected-value": 0
-        },
-        "retry-until-success": true,
-        "include-in-reporting": false
-      }
+      "name": "refresh-after-force-merge",
+      "operation": "refresh"
+    },
+    {
+      "operation": "wait-until-merges-finish"
     },
     {
       "name": "search-after-without-pit",

@@ -90,8 +90,8 @@
     {
       "name": "scroll",
       "operation-type": "search",
-      "pages": 5,
-      "results-per-page": 1,
+      "pages": 25,
+      "results-per-page": 1000,
       "body": {
         "query": {
           "match_all": {}
