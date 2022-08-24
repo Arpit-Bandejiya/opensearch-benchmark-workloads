@@ -55,8 +55,17 @@
     },
     {
       "operation": "scroll",
-      "#COMMENT": "Throughput is considered per request. So we issue one scroll request per second which will retrieve 25 pages",
-      "target-throughput": 1
+      "warmup-iterations": 50,
+      "iterations": 100
+      {%- if not target_throughput %}
+      ,"target-throughput": 0.5
+      {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
+      {%- else %}
+      ,"target-throughput": {{ target_throughput | tojson }}
+      {%- endif %}
+      {%- if search_clients is defined and search_clients %}
+      ,"clients": {{ search_clients | tojson}}
+      {%- endif %}
     }
   ]
 },
@@ -115,8 +124,9 @@
       "operation": "wait-until-merges-finish"
     },
     {
-      "name": "search-after-without-local-pit",
-      "iterations": 5,
+      "name": "search-after-without-pit",
+      "warmup-iterations": 50,
+      "iterations": 100,
       "operation": {
         "operation-type": "composite",
         "requests": [
@@ -124,7 +134,7 @@
             "stream": [
               {
                 "operation-type": "paginated-search",
-                "index": "geonames",
+                "index": "nyc_taxis",
                 "pages": 50,
                 "results-per-page": 1000,
                 "target-throughput": 1,
@@ -134,7 +144,7 @@
                     },
                     "sort": [
                       {
-                        "geonameid": {
+                        "fare_amount": {
                           "order": "desc"
                         }
                       }
@@ -148,8 +158,6 @@
     },
     {
       "name": "create-pit",
-      "warmup-iterations":1,
-      "iterations": 2,
       "operation": {
         "operation-type": "composite",
         "requests": [
@@ -159,7 +167,7 @@
               "operation-type": "create-point-in-time",
               "name": "open-pit",
               "keep-alive": "100m",
-              "index": "geonames"
+              "index": "nyc_taxis"
               }
             ]
           }
@@ -168,7 +176,8 @@
     },
     {
       "name": "paginated-search-with-pit",
-      "iterations": 2,
+      "warmup-iterations": 50,
+      "iterations": 100,
       "operation": {
         "operation-type": "composite",
         "requests": [
@@ -176,7 +185,7 @@
             "stream": [
               {
                 "operation-type": "paginated-search",
-                "index": "geonames",
+                "index": "nyc_taxis",
                 "pages": 50,
                 "results-per-page": 1000,
                 "target-throughput": 1,
@@ -186,7 +195,7 @@
                     },
                     "sort": [
                       {
-                        "geonameid": {
+                        "fare_amount": {
                           "order": "desc"
                         }
                       }
@@ -260,7 +269,8 @@
     },
     {
       "name": "search-after-without-pit",
-      "iterations": 5,
+      "warmup-iterations": 50,
+      "iterations": 100,
       "operation": {
         "operation-type": "composite",
         "requests": [
@@ -268,7 +278,7 @@
             "stream": [
               {
                 "operation-type": "paginated-search",
-                "index": "geonames",
+                "index": "nyc_taxis",
                 "pages": 50,
                 "results-per-page": 1000,
                 "target-throughput": 1,
@@ -278,7 +288,7 @@
                     },
                     "sort": [
                       {
-                        "geonameid": {
+                        "fare_amount": {
                           "order": "desc"
                         }
                       }
