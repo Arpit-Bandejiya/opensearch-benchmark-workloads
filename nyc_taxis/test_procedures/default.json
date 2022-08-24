@@ -1,297 +1,290 @@
+{
+  "name": "scroll-search",
+  "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only. After that a couple of queries are run.",
+  "default": true,
+  "schedule": [
     {
-      "name": "append-no-conflicts",
-      "description": "Indexes the whole document corpus using a setup that will lead to a larger indexing throughput than the default settings and produce a smaller index (higher compression rate). Document ids are unique so all index operations are append only. After that a couple of queries are run.",
-      "default": true,
-      "schedule": [
-        {
-          "operation": "delete-index"
-        },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.codec": "best_compression",
-              "index.refresh_interval": "30s",
-              "index.translog.flush_threshold_size": "4g"
-            }{%- endif %}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "nyc_taxis",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index",
-          "warmup-time-period": 240,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "name": "refresh-after-index",
-          "operation": "refresh"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
-            "max-num-segments": {{ force_merge_max_num_segments | tojson }}
-            {%- endif %}
-          }
-        },
-        {
-          "name": "refresh-after-force-merge",
-          "operation": "refresh"
-        },
-        {
-          "operation": "wait-until-merges-finish"
-        },
-        {
-          "operation": "default",
-          "warmup-iterations": 50,
-          "iterations": 100
-          {%- if not target_throughput %}
-          ,"target-throughput": 3
-          {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
-          {%- else %}
-          ,"target-throughput": {{ target_throughput | tojson }}
-          {%- endif %}
-          {%-if search_clients is defined and search_clients %}
-          ,"clients": {{ search_clients | tojson}}
-          {%- endif %}
-        },
-        {
-          "operation": "range",
-          "warmup-iterations": 50,
-          "iterations": 100
-          {%- if not target_throughput %}
-          ,"target-throughput": 0.7
-          {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
-          {%- else %}
-          ,"target-throughput": {{ target_throughput | tojson }}
-          {%- endif %}
-          {%-if search_clients is defined and search_clients %}
-          ,"clients": {{ search_clients | tojson}}
-          {%- endif %}
-        },
-        {
-          "operation": "distance_amount_agg",
-          "warmup-iterations": 50,
-          "iterations": 100
-          {%- if not target_throughput %}
-          ,"target-throughput": 2
-          {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
-          {%- else %}
-          ,"target-throughput": {{ target_throughput | tojson }}
-          {%- endif %}
-          {%-if search_clients is defined and search_clients %}
-          ,"clients": {{ search_clients | tojson}}
-          {%- endif %}
-        },
-        {
-          "operation": "autohisto_agg",
-          "warmup-iterations": 50,
-          "iterations": 100
-          {%- if not target_throughput %}
-          ,"target-throughput": 1.5
-          {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
-          {%- else %}
-          ,"target-throughput": {{ target_throughput | tojson }}
-          {%- endif %}
-          {%-if search_clients is defined and search_clients %}
-          ,"clients": {{ search_clients | tojson}}
-          {%- endif %}
-        },
-        {
-          "operation": "date_histogram_agg",
-          "warmup-iterations": 50,
-          "iterations": 100
-          {%- if not target_throughput %}
-          ,"target-throughput": 1.5
-          {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
-          {%- else %}
-          ,"target-throughput": {{ target_throughput | tojson }}
-          {%- endif %}
-          {%-if search_clients is defined and search_clients %}
-          ,"clients": {{ search_clients | tojson}}
-          {%- endif %}
-        }
-      ]
+      "operation": "delete-index"
     },
     {
-      "name": "append-no-conflicts-index-only",
-      "description": "Indexes the whole document corpus using a setup that will lead to a larger indexing throughput than the default settings and produce a smaller index (higher compression rate). Document ids are unique so all index operations are append only.",
-      "schedule": [
-        {
-          "operation": "delete-index"
-        },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.codec": "best_compression",
-              "index.refresh_interval": "30s",
-              "index.translog.flush_threshold_size": "4g"
-            }{%- endif %}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "nyc_taxis",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index",
-          "warmup-time-period": 240,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "name": "refresh-after-index",
-          "operation": "refresh"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
-            "max-num-segments": {{ force_merge_max_num_segments | tojson }}
-            {%- endif %}
-          }
-        },
-        {
-          "name": "refresh-after-force-merge",
-          "operation": "refresh"
-        },
-        {
-          "operation": "wait-until-merges-finish"
-        }
-      ]
+      "operation": {
+        "operation-type": "create-index",
+        "settings": {{index_settings | default({}) | tojson}}
+      }
     },
     {
-      "name": "append-sorted-no-conflicts-index-only",
-      "description": "Indexes the whole document corpus in an index sorted by pickup_datetime field in descending order (most recent first) and using a setup that will lead to a larger indexing throughput than the default settings and produce a smaller index (higher compression rate). Document ids are unique so all index operations are append only.",
-      "schedule": [
-        {
-          "operation": "delete-index"
+      "name": "check-cluster-health",
+      "operation": {
+        "operation-type": "cluster-health",
+        "index": "geonames",
+        "request-params": {
+          "wait_for_status": "{{cluster_health | default('green')}}",
+          "wait_for_no_relocating_shards": "true"
         },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.codec": "best_compression",
-              "index.refresh_interval": "30s",
-              "index.translog.flush_threshold_size": "4g",
-              "index.sort.field": "pickup_datetime",
-              "index.sort.order": "desc"
-            }{%- endif %}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "nyc_taxis",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index",
-          "warmup-time-period": 240,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "name": "refresh-after-index",
-          "operation": "refresh"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
-            "max-num-segments": {{ force_merge_max_num_segments | tojson }}
-            {%- endif %}
-          }
-        },
-        {
-          "name": "refresh-after-force-merge",
-          "operation": "refresh"
-        },
-        {
-          "operation": "wait-until-merges-finish"
-        }
-      ]
+        "retry-until-success": true
+      }
     },
     {
-      "name": "update",
-      "schedule": [
-        {
-          "operation": "delete-index"
+      "operation": "index-append",
+      "warmup-time-period": 120,
+      "clients": {{bulk_indexing_clients | default(8)}},
+      "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
+    },
+    {
+      "name": "refresh-after-index",
+      "operation": "refresh"
+    },
+    {
+      "operation": {
+        "operation-type": "force-merge",
+        "request-timeout": 7200
+      }
+    },
+    {
+      "name": "refresh-after-force-merge",
+      "operation": "refresh"
+    },
+    {
+      "name": "wait-until-merges-finish",
+      "operation": {
+        "operation-type": "index-stats",
+        "index": "_all",
+        "condition": {
+          "path": "_all.total.merges.current",
+          "expected-value": 0
         },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.number_of_shards": {{number_of_shards | default(1)}},
-              "index.number_of_replicas": {{number_of_replicas | default(0)}},
-              "index.store.type": "{{store_type | default('fs')}}"
-            }{%- endif %}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "nyc_taxis",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "update",
-          "warmup-time-period": 1200,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "name": "refresh-after-index",
-          "operation": "refresh"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
-            "max-num-segments": {{ force_merge_max_num_segments | tojson }}
-            {%- endif %}
-          }
-        },
-        {
-          "name": "refresh-after-force-merge",
-          "operation": "refresh"
-        },
-        {
-          "operation": "wait-until-merges-finish"
-        }
-      ]
+        "retry-until-success": true,
+        "include-in-reporting": false
+      }
+    },
+    {
+      "operation": "scroll",
+      "#COMMENT": "Throughput is considered per request. So we issue one scroll request per second which will retrieve 25 pages",
+      "target-throughput": 1
     }
-
+  ]
+},
+{
+  "name": "paginated-search-with-point-in-time",
+  "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
+  "schedule": [
+    {
+      "operation": "delete-index"
+    },
+    {
+      "operation": {
+        "operation-type": "create-index",
+        "settings": {{index_settings | default({}) | tojson}}
+      }
+    },
+    {
+      "name": "check-cluster-health",
+      "operation": {
+        "operation-type": "cluster-health",
+        "index": "geonames",
+        "request-params": {
+          "wait_for_status": "{{cluster_health | default('green')}}",
+          "wait_for_no_relocating_shards": "true"
+        },
+        "retry-until-success": true
+      }
+    },
+    {
+      "operation": "index-append",
+      "warmup-time-period": 120,
+      "clients": {{bulk_indexing_clients | default(8)}},
+      "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
+    },
+    {
+      "operation": {
+        "operation-type": "force-merge",
+        "request-timeout": 7200
+      }
+    },
+    {
+      "name": "wait-until-merges-finish",
+      "operation": {
+        "operation-type": "index-stats",
+        "index": "_all",
+        "condition": {
+          "path": "_all.total.merges.current",
+          "expected-value": 0
+        },
+        "retry-until-success": true,
+        "include-in-reporting": false
+      }
+    },
+    {
+      "name": "search-after-without-local-pit",
+      "iterations": 5,
+      "operation": {
+        "operation-type": "composite",
+        "requests": [
+          {
+            "stream": [
+              {
+                "operation-type": "paginated-search",
+                "index": "geonames",
+                "pages": 50,
+                "results-per-page": 1000,
+                "target-throughput": 1,
+                "body": {
+                    "query": {
+                        "match_all": {}
+                    },
+                    "sort": [
+                      {
+                        "geonameid": {
+                          "order": "desc"
+                        }
+                      }
+                    ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "create-pit",
+      "warmup-iterations":1,
+      "iterations": 2,
+      "operation": {
+        "operation-type": "composite",
+        "requests": [
+          {
+            "stream": [
+              {
+              "operation-type": "create-point-in-time",
+              "name": "open-pit",
+              "keep-alive": "100m",
+              "index": "geonames"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginated-search-with-pit",
+      "iterations": 2,
+      "operation": {
+        "operation-type": "composite",
+        "requests": [
+          {
+            "stream": [
+              {
+                "operation-type": "paginated-search",
+                "index": "geonames",
+                "pages": 50,
+                "results-per-page": 1000,
+                "target-throughput": 1,
+                "body": {
+                    "query": {
+                        "match_all": {}
+                    },
+                    "sort": [
+                      {
+                        "geonameid": {
+                          "order": "desc"
+                        }
+                      }
+                    ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "delete-point-in-time",
+      "operation": "delete-point-in-time"
+    }
+  ]
+},
+{
+  "name": "paginated-search-without-point-in-time",
+  "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
+  "schedule": [
+    {
+      "operation": "delete-index"
+    },
+    {
+      "operation": {
+        "operation-type": "create-index",
+        "settings": {{index_settings | default({}) | tojson}}
+      }
+    },
+    {
+      "name": "check-cluster-health",
+      "operation": {
+        "operation-type": "cluster-health",
+        "index": "geonames",
+        "request-params": {
+          "wait_for_status": "{{cluster_health | default('green')}}",
+          "wait_for_no_relocating_shards": "true"
+        },
+        "retry-until-success": true
+      }
+    },
+    {
+      "operation": "index-append",
+      "warmup-time-period": 120,
+      "clients": {{bulk_indexing_clients | default(8)}},
+      "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
+    },
+    {
+      "operation": {
+        "operation-type": "force-merge",
+        "request-timeout": 7200
+      }
+    },
+    {
+      "name": "wait-until-merges-finish",
+      "operation": {
+        "operation-type": "index-stats",
+        "index": "_all",
+        "condition": {
+          "path": "_all.total.merges.current",
+          "expected-value": 0
+        },
+        "retry-until-success": true,
+        "include-in-reporting": false
+      }
+    },
+    {
+      "name": "search-after-without-pit",
+      "iterations": 5,
+      "operation": {
+        "operation-type": "composite",
+        "requests": [
+          {
+            "stream": [
+              {
+                "operation-type": "paginated-search",
+                "index": "geonames",
+                "pages": 50,
+                "results-per-page": 1000,
+                "target-throughput": 1,
+                "body": {
+                    "query": {
+                        "match_all": {}
+                    },
+                    "sort": [
+                      {
+                        "geonameid": {
+                          "order": "desc"
+                        }
+                      }
+                    ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

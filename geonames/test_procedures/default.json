@@ -1,5 +1,5 @@
     {
-      "name": "append-no-conflicts",
+      "name": "scroll-search",
       "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only. After that a couple of queries are run.",
       "default": true,
       "schedule": [
@@ -59,43 +59,153 @@
         },
         {
           "operation": "scroll",
-          "iterations": 2,
           "#COMMENT": "Throughput is considered per request. So we issue one scroll request per second which will retrieve 25 pages",
           "target-throughput": 1
+        }
+      ]
+    },
+    {
+      "name": "paginated-search-with-point-in-time",
+      "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
+      "schedule": [
+        {
+          "operation": "delete-index"
         },
         {
-          "name": "search-after-with-pit",
+          "operation": {
+            "operation-type": "create-index",
+            "settings": {{index_settings | default({}) | tojson}}
+          }
+        },
+        {
+          "name": "check-cluster-health",
+          "operation": {
+            "operation-type": "cluster-health",
+            "index": "geonames",
+            "request-params": {
+              "wait_for_status": "{{cluster_health | default('green')}}",
+              "wait_for_no_relocating_shards": "true"
+            },
+            "retry-until-success": true
+          }
+        },
+        {
+          "operation": "index-append",
+          "warmup-time-period": 120,
+          "clients": {{bulk_indexing_clients | default(8)}},
+          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
+        },
+        {
+          "operation": {
+            "operation-type": "force-merge",
+            "request-timeout": 7200
+          }
+        },
+        {
+          "name": "wait-until-merges-finish",
+          "operation": {
+            "operation-type": "index-stats",
+            "index": "_all",
+            "condition": {
+              "path": "_all.total.merges.current",
+              "expected-value": 0
+            },
+            "retry-until-success": true,
+            "include-in-reporting": false
+          }
+        },
+        {
+          "name": "search-after-without-local-pit",
+          "iterations": 5,
           "operation": {
             "operation-type": "composite",
             "requests": [
               {
                 "stream": [
                   {
-                    "operation-type": "open-point-in-time",
-                    "name": "open-pit",
-                    "index": "geonames"
-                  },
-                  {
                     "operation-type": "paginated-search",
                     "index": "geonames",
-                    "with-point-in-time-from": "open-pit",
-                    "pages": 5,
-                    "results-per-page": 1,
+                    "pages": 50,
+                    "results-per-page": 1000,
+                    "target-throughput": 1,
                     "body": {
-                      "query": {
-                        "match_all": {}
-                      }
+                        "query": {
+                            "match_all": {}
+                        },
+                        "sort": [
+                          {
+                            "geonameid": {
+                              "order": "desc"
+                            }
+                          }
+                        ]
                     }
                   }
                 ]
               }
             ]
           }
+        },
+        {
+          "name": "create-pit",
+          "warmup-iterations":1,
+          "iterations": 2,
+          "operation": {
+            "operation-type": "composite",
+            "requests": [
+              {
+                "stream": [
+                  {
+                  "operation-type": "create-point-in-time",
+                  "name": "open-pit",
+                  "keep-alive": "100m",
+                  "index": "geonames"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "paginated-search-with-pit",
+          "iterations": 2,
+          "operation": {
+            "operation-type": "composite",
+            "requests": [
+              {
+                "stream": [
+                  {
+                    "operation-type": "paginated-search",
+                    "index": "geonames",
+                    "pages": 50,
+                    "results-per-page": 1000,
+                    "target-throughput": 1,
+                    "body": {
+                        "query": {
+                            "match_all": {}
+                        },
+                        "sort": [
+                          {
+                            "geonameid": {
+                              "order": "desc"
+                            }
+                          }
+                        ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "delete-point-in-time",
+          "operation": "delete-point-in-time"
         }
       ]
     },
     {
-      "name": "append-no-conflicts-index-only",
+      "name": "paginated-search-without-point-in-time",
       "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
       "schedule": [
         {
@@ -143,192 +253,38 @@
             "retry-until-success": true,
             "include-in-reporting": false
           }
-        }
-      ]
-    },
-    {
-      "name": "append-sorted-no-conflicts",
-      "description": "Indexes the whole document corpus in an index sorted by country_code field in ascending order. Document ids are unique so all index operations are append only.",
-      "schedule": [
-        {
-          "operation": "delete-index"
         },
         {
+          "name": "search-after-without-pit",
+          "iterations": 5,
           "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.sort.field": ["country_code.raw", "admin1_code.raw"],
-              "index.sort.order": ["asc", "asc"]
-            }{%- endif %}
+            "operation-type": "composite",
+            "requests": [
+              {
+                "stream": [
+                  {
+                    "operation-type": "paginated-search",
+                    "index": "geonames",
+                    "pages": 50,
+                    "results-per-page": 1000,
+                    "target-throughput": 1,
+                    "body": {
+                        "query": {
+                            "match_all": {}
+                        },
+                        "sort": [
+                          {
+                            "geonameid": {
+                              "order": "desc"
+                            }
+                          }
+                        ]
+                    }
+                  }
+                ]
+              }
+            ]
           }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "geonames",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index-append",
-          "warmup-time-period": 120,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200
-          }
-        },
-        {
-          "name": "wait-until-merges-finish",
-          "operation": {
-            "operation-type": "index-stats",
-            "index": "_all",
-            "condition": {
-              "path": "_all.total.merges.current",
-              "expected-value": 0
-            },
-            "retry-until-success": true,
-            "include-in-reporting": false
-          }
-        }
-      ]
-    },
-    {
-      "name": "append-fast-with-conflicts",
-      "description": "Indexes the whole document corpus using a setup that will lead to a larger indexing throughput than the default settings. Benchmark will produce duplicate ids in 25% of all documents (not configurable) so we can simulate a scenario with appends most of the time and some updates in between.",
-      "schedule": [
-        {
-          "operation": "delete-index"
-        },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
-              "index.refresh_interval": "30s",
-              "index.number_of_shards": {{number_of_shards | default(6)}},
-              "index.translog.flush_threshold_size": "4g"
-            }{%- endif %}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "geonames",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index-update",
-          "warmup-time-period": 45,
-          "clients": {{bulk_indexing_clients | default(8)}},
-          "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200
-          }
-        },
-        {
-          "name": "wait-until-merges-finish",
-          "operation": {
-            "operation-type": "index-stats",
-            "index": "_all",
-            "condition": {
-              "path": "_all.total.merges.current",
-              "expected-value": 0
-            },
-            "retry-until-success": true,
-            "include-in-reporting": false
-          }
-        }
-      ]
-    },
-    {
-      "name": "significant-text",
-      "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
-      "schedule": [
-        {
-          "operation": "delete-index"
-        },
-        {
-          "operation": {
-            "operation-type": "create-index",
-            "settings": {{index_settings | default({}) | tojson}}
-          }
-        },
-        {
-          "name": "check-cluster-health",
-          "operation": {
-            "operation-type": "cluster-health",
-            "index": "geonames",
-            "request-params": {
-              "wait_for_status": "{{cluster_health | default('green')}}",
-              "wait_for_no_relocating_shards": "true"
-            },
-            "retry-until-success": true
-          }
-        },
-        {
-          "operation": "index-append",
-          "warmup-time-period": 120,
-          "clients": {{bulk_indexing_clients | default(8)}}
-        },
-        {
-          "operation": {
-            "operation-type": "force-merge",
-            "request-timeout": 7200
-          }
-        },
-        {
-          "name": "wait-until-merges-finish",
-          "operation": {
-            "operation-type": "index-stats",
-            "index": "_all",
-            "condition": {
-              "path": "_all.total.merges.current",
-              "expected-value": 0
-            },
-            "retry-until-success": true,
-            "include-in-reporting": false
-          }
-        },
-        {
-          "operation": "significant_text_selective",
-          "warmup-iterations": 200,
-          "iterations": 100,
-          "target-throughput": 2
-        },
-        {
-          "operation": "significant_text_sampled_selective",
-          "warmup-iterations": 200,
-          "iterations": 100,
-          "target-throughput": 20
-        },
-        {
-          "operation": "significant_text_unselective",
-          "warmup-iterations": 50,
-          "iterations": 20,
-          "target-throughput": 0.04
-        },
-        {
-          "operation": "significant_text_sampled_unselective",
-          "warmup-iterations": 200,
-          "iterations": 100,
-          "target-throughput": 6
         }
       ]
     }
