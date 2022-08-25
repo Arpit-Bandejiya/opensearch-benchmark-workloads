@@ -66,6 +66,25 @@
       {%- if search_clients is defined and search_clients %}
       ,"clients": {{ search_clients | tojson}}
       {%- endif %}
+    },
+    {
+      "operation-type": "paginated-search",
+      "index": "nyc_taxis",
+      "pages": 50,
+      "results-per-page": 1000,
+      "target-throughput": 1,
+      "body": {
+        "query": {
+          "match_all": {}
+        },
+        "sort": [
+          {
+            "fare_amount": {
+              "order": "desc"
+            }
+          }
+        ]
+      }
     }
   ]
 },

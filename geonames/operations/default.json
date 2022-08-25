@@ -93,10 +93,36 @@
       "pages": 25,
       "results-per-page": 1000,
       "body": {
-        "query": {
-          "match_all": {}
-        }
-      }
+      "query": {
+    "match_all": {}
+    },
+    "sort": [
+    {
+    "geonameid": {
+    "order": "desc"
+    }
+    }
+    ]
+    }
+    },
+    {
+    "name": "paginated-search",
+    "operation-type": "paginated-search",
+            "index": "geonames",
+    "pages": 25,
+    "results-per-page": 1000,
+    "body": {
+    "query": {
+    "match_all": {}
+    },
+    "sort": [
+    {
+    "geonameid": {
+    "order": "desc"
+    }
+    }
+    ]
+    }
     },
     {
       "name": "expression",

@@ -58,8 +58,52 @@
           }
         },
         {
+          "name": "without pit paginated search first run",
+          "operation": "paginated-search",
+          "warmup-iterations": 50,
+          "iterations": 100,
+          "target-throughput": 1
+        },
+        {
+          "name": "create-pit",
+          "operation": {
+            "operation-type": "composite",
+            "requests": [
+              {
+                "stream": [
+                  {
+                    "operation-type": "create-point-in-time",
+                    "name": "open-pit",
+                    "keep-alive": "100m",
+                    "index": "geonames"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "operation": "paginated-search",
+          "warmup-iterations": 50,
+          "iterations": 100,
+          "target-throughput": 1
+        },
+        {
+          "name": "delete-point-in-time",
+          "operation": "delete-point-in-time"
+        },
+        {
           "operation": "scroll",
+          "warmup-iterations": 50,
+          "iterations": 100,
           "#COMMENT": "Throughput is considered per request. So we issue one scroll request per second which will retrieve 25 pages",
+          "target-throughput": 1
+        },
+        {
+          "name": "without pit paginated search",
+          "operation": "paginated-search",
+          "warmup-iterations": 50,
+          "iterations": 100,
           "target-throughput": 1
         }
       ]
