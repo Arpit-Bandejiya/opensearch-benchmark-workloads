@@ -90,6 +90,7 @@
     {
       "name": "scroll",
       "operation-type": "search",
+    "index": "geonames",
       "pages": 25,
       "results-per-page": 1000,
       "body": {

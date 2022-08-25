@@ -66,25 +66,113 @@
       {%- if search_clients is defined and search_clients %}
       ,"clients": {{ search_clients | tojson}}
       {%- endif %}
+    }
+  ]
+},
+{
+  "name": "scroll-paginated-search",
+  "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only. After that a couple of queries are run.",
+  "default": true,
+  "schedule": [
+    {
+      "operation": "delete-index"
     },
     {
-      "operation-type": "paginated-search",
-      "index": "nyc_taxis",
-      "pages": 50,
-      "results-per-page": 1000,
-      "target-throughput": 1,
-      "body": {
-        "query": {
-          "match_all": {}
+      "operation": {
+        "operation-type": "create-index",
+        "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
+          "index.codec": "best_compression",
+          "index.refresh_interval": "30s",
+          "index.translog.flush_threshold_size": "4g"
+        }{%- endif %}
+      }
+    },
+    {
+      "name": "check-cluster-health",
+      "operation": {
+        "operation-type": "cluster-health",
+        "index": "nyc_taxis",
+        "request-params": {
+          "wait_for_status": "{{cluster_health | default('green')}}",
+          "wait_for_no_relocating_shards": "true"
         },
-        "sort": [
+        "retry-until-success": true
+      }
+    },
+    {
+      "operation": "index",
+      "warmup-time-period": 240,
+      "clients": {{bulk_indexing_clients | default(8)}},
+      "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
+    },
+    {
+      "name": "refresh-after-index",
+      "operation": "refresh"
+    },
+    {
+      "operation": {
+        "operation-type": "force-merge",
+        "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
+        "max-num-segments": {{ force_merge_max_num_segments | tojson }}
+        {%- endif %}
+      }
+    },
+    {
+      "name": "refresh-after-force-merge",
+      "operation": "refresh"
+    },
+    {
+      "operation": "wait-until-merges-finish"
+    },
+    {
+      "operation": "scroll",
+      "warmup-iterations": 50,
+      "iterations": 100
+      {%- if not target_throughput %}
+      ,"target-throughput": 0.5
+      {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
+      {%- else %}
+      ,"target-throughput": {{ target_throughput | tojson }}
+      {%- endif %}
+      {%- if search_clients is defined and search_clients %}
+      ,"clients": {{ search_clients | tojson}}
+      {%- endif %}
+    },
+    {
+      "name": "create-pit",
+      "operation": {
+        "operation-type": "composite",
+        "requests": [
           {
-            "fare_amount": {
-              "order": "desc"
-            }
+            "stream": [
+              {
+              "operation-type": "create-point-in-time",
+              "name": "open-pit",
+              "keep-alive": "100m",
+              "index": "nyc_taxis"
+              }
+            ]
           }
         ]
       }
+    },
+    {
+      "operation": "paginated-search",
+      "warmup-iterations": 50,
+      "iterations": 100
+      {%- if not target_throughput %}
+      ,"target-throughput": 0.5
+      {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
+      {%- else %}
+      ,"target-throughput": {{ target_throughput | tojson }}
+      {%- endif %}
+      {%- if search_clients is defined and search_clients %}
+      ,"clients": {{ search_clients | tojson}}
+      {%- endif %}
+    },
+    {
+      "name": "delete-point-in-time",
+      "operation": "delete-point-in-time"
     }
   ]
 },
@@ -143,39 +231,6 @@
       "operation": "wait-until-merges-finish"
     },
     {
-      "name": "search-after-without-pit",
-      "warmup-iterations": 50,
-      "iterations": 100,
-      "operation": {
-        "operation-type": "composite",
-        "requests": [
-          {
-            "stream": [
-              {
-                "operation-type": "paginated-search",
-                "index": "nyc_taxis",
-                "pages": 50,
-                "results-per-page": 1000,
-                "target-throughput": 1,
-                "body": {
-                    "query": {
-                        "match_all": {}
-                    },
-                    "sort": [
-                      {
-                        "fare_amount": {
-                          "order": "desc"
-                        }
-                      }
-                    ]
-                }
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "create-pit",
       "operation": {
         "operation-type": "composite",
@@ -194,37 +249,18 @@
       }
     },
     {
-      "name": "paginated-search-with-pit",
+      "operation": "paginated-search",
       "warmup-iterations": 50,
-      "iterations": 100,
-      "operation": {
-        "operation-type": "composite",
-        "requests": [
-          {
-            "stream": [
-              {
-                "operation-type": "paginated-search",
-                "index": "nyc_taxis",
-                "pages": 50,
-                "results-per-page": 1000,
-                "target-throughput": 1,
-                "body": {
-                    "query": {
-                        "match_all": {}
-                    },
-                    "sort": [
-                      {
-                        "fare_amount": {
-                          "order": "desc"
-                        }
-                      }
-                    ]
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "iterations": 100
+      {%- if not target_throughput %}
+      ,"target-throughput": 0.5
+      {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
+      {%- else %}
+      ,"target-throughput": {{ target_throughput | tojson }}
+      {%- endif %}
+      {%- if search_clients is defined and search_clients %}
+      ,"clients": {{ search_clients | tojson}}
+      {%- endif %}
     },
     {
       "name": "delete-point-in-time",
@@ -287,37 +323,18 @@
       "operation": "wait-until-merges-finish"
     },
     {
-      "name": "search-after-without-pit",
+      "operation": "paginated-search",
       "warmup-iterations": 50,
-      "iterations": 100,
-      "operation": {
-        "operation-type": "composite",
-        "requests": [
-          {
-            "stream": [
-              {
-                "operation-type": "paginated-search",
-                "index": "nyc_taxis",
-                "pages": 50,
-                "results-per-page": 1000,
-                "target-throughput": 1,
-                "body": {
-                    "query": {
-                        "match_all": {}
-                    },
-                    "sort": [
-                      {
-                        "fare_amount": {
-                          "order": "desc"
-                        }
-                      }
-                    ]
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "iterations": 100
+      {%- if not target_throughput %}
+      ,"target-throughput": 0.5
+      {%- elif target_throughput is string and target_throughput.lower() == 'none' %}
+      {%- else %}
+      ,"target-throughput": {{ target_throughput | tojson }}
+      {%- endif %}
+      {%- if search_clients is defined and search_clients %}
+      ,"clients": {{ search_clients | tojson}}
+      {%- endif %}
     }
   ]
 }

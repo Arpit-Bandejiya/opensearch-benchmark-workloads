@@ -17,15 +17,40 @@
     {
       "name": "scroll",
       "operation-type": "search",
+    "index": "nyc_taxis",
       "pages": 25,
-      "results-per-page": 100,
-      "#COMMENT": "Large responses cause overhead on the client when decompressing the response. Disable to avoid the overhead",
-      "response-compression-enabled": false,
+      "results-per-page": 1000,
       "body": {
-        "query": {
-          "match_all": {}
-        }
-      }
+      "query": {
+    "match_all": {}
+    },
+    "sort": [
+    {
+    "fare_amount": {
+    "order": "desc"
+    }
+    }
+    ]
+    }
+    },
+    {
+    "name": "paginated-search",
+    "operation-type": "paginated-search",
+            "index": "nyc_taxis",
+    "pages": 25,
+    "results-per-page": 1000,
+    "body": {
+    "query": {
+    "match_all": {}
+    },
+    "sort": [
+    {
+    "fare_amount": {
+    "order": "desc"
+    }
+    }
+    ]
+    }
     },
     {
       "name": "wait-until-merges-finish",
