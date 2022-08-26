@@ -49,8 +49,8 @@
                 "order": "desc"
             }
           }
-        ]
-      }
+      ]
+    }
     },
     {
       "name": "wait-until-merges-finish",

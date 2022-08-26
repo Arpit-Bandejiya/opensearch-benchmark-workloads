@@ -12,11 +12,14 @@
   "corpora": [
     {
       "name": "nyc_taxis",
+      "base-url": "https://opensearch-benchmark-workloads.s3.amazonaws.com/corpora/nyc_taxis",
       "documents": [
         {
-          "source-file": "document.json",
+          "source-file": "documents.json.bz2",
           "#COMMENT": "ML benchmark rely on the fact that the document count stays constant.",
-          "document-count": 1000
+          "document-count": 165346692,
+          "compressed-bytes": 4820107188,
+          "uncompressed-bytes": 79802445255
         }
       ]
     }
