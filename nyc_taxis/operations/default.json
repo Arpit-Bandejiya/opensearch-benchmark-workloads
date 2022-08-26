@@ -36,21 +36,21 @@
     {
     "name": "paginated-search",
     "operation-type": "paginated-search",
-            "index": "nyc_taxis",
+    "index": "nyc_taxis",
     "pages": 25,
     "results-per-page": 1000,
-    "body": {
-    "query": {
-    "match_all": {}
-    },
-    "sort": [
-    {
-    "fare_amount": {
-    "order": "desc"
-    }
-    }
-    ]
-    }
+      "body": {
+        "query": {
+          "match_all": {}
+        },
+        "sort": [
+          {
+            "fare_amount": {
+                "order": "desc"
+            }
+          }
+        ]
+      }
     },
     {
       "name": "wait-until-merges-finish",
