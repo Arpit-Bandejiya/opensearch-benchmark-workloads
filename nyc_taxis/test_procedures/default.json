@@ -343,6 +343,7 @@
       }
     },
     {
+      "name": "delete-point-in-time-1",
       "operation": "delete-point-in-time"
     },
     {
@@ -367,6 +368,7 @@
       }
     },
     {
+      "name": "delete-point-in-time-2",
       "operation": "delete-point-in-time"
     },
     {
@@ -391,6 +393,7 @@
       }
     },
     {
+      "name": "delete-point-in-time-3",
       "operation": "delete-point-in-time"
     },
     {
@@ -415,6 +418,7 @@
       }
     },
     {
+      "name": "delete-point-in-time-4",
       "operation": "delete-point-in-time"
     }
 
