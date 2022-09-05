@@ -499,11 +499,13 @@
 "description": "Indexes the whole document corpus using OpenSearch default settings. We only adjust the number of replicas as we benchmark a single node cluster and Benchmark will only start the benchmark if the cluster turns green. Document ids are unique so all index operations are append only.",
 "schedule": [
 {
-"operation": "delete-index"
+"operation": "delete-index",
+"target-throughput": 1
 },
 {
 "operation": {
 "operation-type": "create-index",
+"target-throughput": 1,
 "settings": {%- if index_settings is defined %} {{index_settings | tojson}} {%- else %} {
 "index.codec": "best_compression",
 "index.refresh_interval": "30s",
@@ -514,16 +516,19 @@
 {
 "operation": "index",
 "warmup-time-period": 240,
-"clients": {{bulk_indexing_clients | default(8)}},
+"target-throughput": 1,
+"clients": {{bulk_indexing_clients | default(1)}},
 "ignore-response-error-level": "{{error_level | default('non-fatal')}}"
 },
 {
 "name": "refresh-after-index",
-"operation": "refresh"
+"operation": "refresh",
+"target-throughput": 1
 },
 {
 "operation": {
 "operation-type": "force-merge",
+"target-throughput": 1,
 "request-timeout": 7200{%- if force_merge_max_num_segments is defined %},
 "max-num-segments": {{ force_merge_max_num_segments | tojson }}
 {%- endif %}
@@ -531,13 +536,15 @@
 },
 {
 "name": "refresh-after-force-merge",
+"target-throughput": 1,
 "operation": "refresh"
 },
 {
-"operation": "wait-until-merges-finish"
+"operation": "wait-until-merges-finish","target-throughput": 1
 },
 {
 "name": "create-pit",
+"target-throughput": 1,
 "operation": {
 "operation-type": "composite",
 "requests": [
@@ -556,6 +563,7 @@
 },
 {
 "name": "list-all-point-in-time",
+"target-throughput": 1,
 "warmup-iterations": 50,
 "iterations": 2000,
 "operation": "list-all-point-in-time"
