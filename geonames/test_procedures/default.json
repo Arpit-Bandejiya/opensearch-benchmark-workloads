@@ -69,6 +69,30 @@
           "iterations": 100,
           "#COMMENT": "Throughput is considered per request. So we issue one scroll request per second which will retrieve 25 pages",
           "target-throughput": 1
+        },
+        {
+          "name": "create-pit",
+          "operation": {
+            "operation-type": "composite",
+            "requests": [
+              {
+                "stream": [
+                  {
+                    "operation-type": "create-point-in-time",
+                    "name": "open-pit",
+                    "keep-alive": "100m",
+                    "index": "geonames"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "list-all-point-in-time",
+          "warmup-iterations": 50,
+          "iterations": 200,
+          "operation": "list-all-point-in-time"
         }
       ]
     },
