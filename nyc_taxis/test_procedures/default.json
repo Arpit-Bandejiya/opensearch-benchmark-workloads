@@ -512,18 +512,6 @@
 }
 },
 {
-"name": "check-cluster-health",
-"operation": {
-"operation-type": "cluster-health",
-"index": "nyc_taxis",
-"request-params": {
-"wait_for_status": "{{cluster_health | default('green')}}",
-"wait_for_no_relocating_shards": "true"
-},
-"retry-until-success": true
-}
-},
-{
 "operation": "index",
 "warmup-time-period": 240,
 "clients": {{bulk_indexing_clients | default(8)}},
@@ -569,7 +557,7 @@
 {
 "name": "list-all-point-in-time",
 "warmup-iterations": 50,
-"iterations": 200,
+"iterations": 2000,
 "operation": "list-all-point-in-time"
 }
 ]
