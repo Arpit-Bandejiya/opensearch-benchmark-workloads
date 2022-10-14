@@ -53,7 +53,7 @@
     }
     },
     {
-      "name": "point-in-time-search",
+      "name": "point-in-time-search-operation",
       "operation-type": "point-in-time-search",
       "index": "nyc_taxis",
       "pages": 5,
