@@ -53,6 +53,25 @@
     }
     },
     {
+      "name": "point-in-time-search",
+      "operation-type": "point-in-time-search",
+      "index": "nyc_taxis",
+      "pages": 5,
+      "results-per-page": 10,
+      "body": {
+        "query": {
+          "match_all": {}
+          },
+        "sort": [
+          {
+            "fare_amount": {
+              "order": "desc"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "wait-until-merges-finish",
       "operation-type": "index-stats",
       "index": "_all",
