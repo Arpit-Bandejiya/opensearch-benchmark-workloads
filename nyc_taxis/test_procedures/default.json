@@ -230,7 +230,7 @@
       "operation": "wait-until-merges-finish"
     },
     {
-      "operation": "point-in-time-search-operation",
+      "operation": "point-in-time-search",
       "warmup-iterations": 2,
       "iterations": 3
     }
